@@ -1,0 +1,184 @@
+use practice_sql;
+
+-- 1. Add a domain constraint to ensure all scores in Table_01 must be between 0 and 100.
+
+select * from table_01;
+desc table_01;
+alter table table_01 add constraint score_check check (score between 0 and 100);
+insert into table_01 values("Amitabh", 120);
+
+-- 2. Create a composite index on City and Mobile_number in Table_02 to optimize search.
+
+select * from table_02;
+select name, city from table_02;
+create index city_mobile on table_02(city,mobile_number);
+show index from table_02;
+select name, city from table_02;
+
+-- 3. Write a stored procedure to return average score of a given person in Table_03.
+
+select * from table_03;
+call GetAvgScore("raj");
+
+-- 4. Create a before insert trigger on Table_01 to prevent inserting a score less than 0.
+
+select * from table_01;
+desc table_01;
+insert into table_01 values ("Amitabh", -50)
+delete from table_01 where score = 50;
+
+-- 5. Create a view that shows names from Table_01 and their total score from Table_03.
+
+select * from table_01;
+select * from table_03;
+select a.name, sum(b.score) T_score from table_01 as a inner join table_03 as b on a.name = b.name group by 1;
+create view name_score as select a.name, sum(b.score) T_score from table_01 as a inner join table_03 as b on a.name = b.name group by 1;
+select * from name_score;
+
+-- 6. Create a UDF that returns grade ('A', 'B', 'C', 'Fail') based on input score.
+
+select * from table_01;
+select gradestatus(30);
+select name, gradestatus(score) as grades from table_01;
+
+-- 7. Use COALESCE to display city name, or 'Not Provided' if city is null in Table_02.
+
+select * from table_01;
+select * from table_02;
+
+select name, coalesce(city, "not provided") as city_name from table_02;
+
+select name, coalesce(city, "Not Provided") as City_name from (
+select a.name, b.city from table_01 as a left join table_02 as b on a.name=b.name) ab;
+
+-- 8. Create a RIGHT JOIN query between Table_01 and Table_02 and use IFNULL to fill missing scores with 0.
+
+select b.name, ifnull(a.score, 0), b.mobile_number, b.city from table_01 as a right join table_02 as b on a.name = b.name;
+
+-- 9. Use a FULL OUTER JOIN (via UNION) to display all names from Table_01 and Table_02, with their scores and cities.
+
+select * from table_01 as a left join table_02 as b on a.name = b.name
+union
+select * from table_01 as a right join table_02 as b on a.name = b.name;
+
+-- 10. Write a trigger to log any deletion from Table_01 into a new table Deleted_Records.
+
+select * from table_01;
+desc table_01;
+create table Deteted_records (sno int primary key auto_increment, name varchar(512), score int, message text, DateTime_at datetime);
+delete from table_01 where name = "Amitabh";
+drop trigger if exists table_01; 
+select * from deteted_records;
+
+-- 11. Display formatted names (UPPERCASE) and mobile numbers with dashes (e.g., 123-456-7890) from Table_02.
+
+select * from table_02;
+select upper(name) NAME, concat(left(mobile_number,3), "-",mid(mobile_number,4,3), "-", right(mobile_number,4)) M_No, city from table_02;
+
+-- 12. Use a SELF JOIN to list pairs of people from Table_01 who have exactly 10 marks difference.
+
+select * from table_01;
+select a.name as person1, a.score, b.name as person2, b.score from table_01 as a join table_01 as b on (a.score - b.score) >= 20 and a.name < b.name;
+
+-- 13. Use CROSS JOIN on drinks and meals to find combinations where total rate exceeds ₹50.
+
+select * from drink_new;
+select * from meals_new;
+select a.drinkname, b.mealname, (a.rate + b.rate) T_rate from drink_new as a join meals_new as b on (a.rate + b.rate) > 50;
+
+-- 14. Write a view showing top 3 scores per user in Table_03 using RANK function.
+
+select * from table_03;
+select rank() over(partition by name order by score desc) rnk, name, score from table_03;
+create view Top3_score as (select * from (select rank() over(partition by name order by score desc) rnk, name, score from table_03)ab where rnk <= 3);
+select * from top3_score;
+
+-- 15. Create a stored procedure to return names of people from Table_01 who scored more than a dynamic input.
+
+select * from table_01;
+call score_table_01(70);
+
+-- 16. Create a UDF that returns “Pass” or “Fail” based on average score from Table_03.
+
+select * from table_03;
+select *, if(score >= (select avg(score) avg_score from table_03), "Pass", "Fail") Result from table_03;
+select name, score, result_table_03(score) as result from table_03;
+
+-- 17. Write a LEFT JOIN query that lists all users from Table_01 and their mobile number, if any.
+
+select * from table_01;
+select * from table_02;
+select a.name, b.mobile_number from table_01 as a left join table_02 as b on a.name = b.name;
+
+-- 18. Create an AFTER INSERT trigger on Table_03 that prevents insertion of score > 100.
+
+select * from table_03;
+desc table_03;
+alter table table_03 add constraint score check(score < 100);
+insert into table_03 values("Amitabh", 120);
+
+-- 19. Use FORMAT to show scores from Table_01 rounded to 2 decimal places as strings (e.g., 76.00).
+
+select * from table_01;
+select name, format(score,2) formatted_score from table_01;
+
+-- 20. Create a view joining all three tables (Table_01, Table_02, Table_03) and show the total score for each user.
+
+select * from table_01;
+select * from table_02;
+select * from table_03;
+select name, sum(score) from table_03 group by 1;
+
+select d.name, d.mobile_number, d.city, (e.score + d.T_score) TotalScore from (
+select a.name, b.mobile_number, b.city, sum(c.score) T_score 
+from table_01 as a join table_02 as b on a.name = b.name 
+join table_03 as c on a.name = c.name group by 1,2,3) d join table_01 as e on d.name = e.name;
+
+-- 21. Use a window function to rank users based on total score in Table_03.
+
+select rank() over(order by sum(score) desc) rnk, name, sum(score) T_score from Table_03 group by 2;
+
+-- 22. Display all customers from Superstore who had above-average profit in their region.
+
+select avg(profit) avg_profit from superstore;
+select row_number() over(partition by region order by profit) rnk, region, customer_name, profit from superstore where profit > (select avg(profit) avg_profit from superstore);
+
+-- 23. Write a query to extract all usernames in lowercase, reversed, and trimmed to first 5 characters.
+
+select customer_name, reverse(lower(mid(customer_name,1,5))) Result from superstore;
+
+-- 24. Show top 5 highest-scoring users from Table_03 using LIMIT and ORDER BY.
+
+select name, sum(score) T_score from Table_03 group by 1 order by 2 desc limit 5;
+
+-- 25. Show number of orders shipped more than 15 days after order date using DATEDIFF.
+
+select order_id, datediff(ship_date,order_date) days_delay from superstore where datediff(ship_date,order_date) > 15 order by 2;
+select count(*) Order_Count from superstore where datediff(ship_date,order_date) > 15;
+
+-- 26. Find products in Superstore where Sales was between average and maximum sales using HAVING.
+
+select * from superstore;
+select avg(sales) from superstore;
+select max(sales) from superstore;
+select * from superstore where sales between (select avg(sales) from superstore) and (select max(sales) from superstore) order by sales;
+
+-- 27. Write a subquery to show names from Table_01 whose total score is more than the average total score.
+
+select * from table_01;
+select avg(score) from table_01;
+select name, score from table_01 where score > (select avg(score) from table_01);
+
+-- 28. Replace all occurrences of 'del' with 'Delhi' in the City column of Table_02.
+
+select * from table_02;
+select name, mobile_number, replace(city, "del", "Delhi") New_city_name from table_02;
+
+-- 29. Show number of products per category using GROUP BY, but filter only categories having more than 5 products using HAVING.
+
+select category, product_name, count(*) number_of_products from superstore group by 1,2 having count(*) > 5 order by 3;
+
+-- 30. Write a stored procedure in Superstore to show top 3 profitable products in each region using window functions.
+
+select drnk, region, product_name, Total_profit from (select dense_rank() over(partition by region order by sum(profit) desc) drnk, region, product_name, sum(profit) Total_profit from superstore group by 2,3) ab where drnk <=3;
+call Top3_Profitable_Product("south");
